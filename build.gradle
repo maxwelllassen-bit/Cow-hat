@@ -1,35 +1,23 @@
-buildscript {
-    repositories {
-        mavenCentral()
-        maven { url = "https://maven.minecraftforge.net/" }
-        maven { url = "https://repo.spongepowered.org/maven/" }
-    }
-    dependencies {
-        classpath "net.minecraftforge.gradle:ForgeGradle:2.1-SNAPSHOT"
-    }
+plugins {
+    id "net.fabricmc.fabric-loom" version "1.19.4"
 }
 
-apply plugin: "net.minecraftforge.gradle.forge"
-
-version = "1.0.0"
+version = project.mod_version
 group = "com.cowhat"
-archivesBaseName = "CowHat"
+base { archivesName = "cow-hat" }
 
-sourceCompatibility = targetCompatibility = "1.8"
+repositories {}
 
-minecraft {
-    version = "1.8.9-11.15.1.2318-1.8.9"
-    runDir = "run"
-    mappings = "stable_22"
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 }
 
 processResources {
     inputs.property "version", project.version
-    from(sourceSets.main.resources.srcDirs) {
-        include "mcmod.info"
-        expand "version": project.version
-    }
-    from(sourceSets.main.resources.srcDirs) {
-        exclude "mcmod.info"
-    }
+    filesMatching("fabric.mod.json") { expand "version": project.version }
 }
+
+tasks.withType(JavaCompile).configureEach { options.release = 25 }
+java { sourceCompatibility = JavaVersion.VERSION_25; targetCompatibility = JavaVersion.VERSION_25 }

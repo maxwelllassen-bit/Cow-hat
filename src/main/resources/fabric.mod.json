@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "cowhat",
+  "version": "${version}",
+  "name": "Cow Hat",
+  "description": "Client-side: replaces the cow hat cosmetic with a Star of David.",
+  "environment": "client",
+  "entrypoints": { "client": ["com.cowhat.CowHatClient"] },
+  "mixins": [{ "config": "cowhat.mixins.json", "environment": "client" }],
+  "depends": { "fabricloader": ">=0.20.1", "minecraft": "~26.3", "java": ">=25", "fabric-api": "*" }
+}
