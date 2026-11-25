@@ -1,0 +1,8 @@
+[{
+  "modid": "cowhat",
+  "name": "Cow Hat",
+  "description": "Client-side: replaces the cow hat cosmetic with a Star of David.",
+  "version": "${version}",
+  "mcversion": "1.8.9",
+  "authorList": []
+}]
