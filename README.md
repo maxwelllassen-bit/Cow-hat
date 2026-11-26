@@ -24,10 +24,11 @@ writes `config/cowhat-allowlist.json`:
 
 ```json
 {
-  "names": ["Notch"],
-  "uuids": ["069a79f4-44e9-4726-a5be-fca90e38aaf5"]
+  "names": ["snowrain"],
+  "uuids": ["e74490ab-3bd0-4e3b-8486-233f1bf18ae5"]
 }
 ```
 
-Add the usernames or UUIDs you want to authorize. An empty or missing file means nobody is
-authorized (fails closed) — the mod does nothing and vanilla rendering is untouched.
+That's the default the mod ships with (authorizing `snowrain`). Add more usernames or UUIDs
+as needed. An empty or missing file means nobody is authorized (fails closed) — the mod does
+nothing and vanilla rendering is untouched.

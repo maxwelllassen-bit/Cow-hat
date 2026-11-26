@@ -59,7 +59,8 @@ public final class CowHatAuth {
             Files.createDirectories(CONFIG.getParent());
             Files.writeString(CONFIG,
                     "{\n  \"_comment\": \"Add Minecraft usernames and/or UUIDs to authorize them for Cow Hat.\",\n"
-                    + "  \"names\": [],\n  \"uuids\": []\n}\n",
+                    + "  \"names\": [\"snowrain\"],\n"
+                    + "  \"uuids\": [\"e74490ab-3bd0-4e3b-8486-233f1bf18ae5\"]\n}\n",
                     StandardCharsets.UTF_8);
         } catch (IOException e) {
             CowHatClient.LOGGER.warn("Cow Hat: could not write default allowlist", e);
