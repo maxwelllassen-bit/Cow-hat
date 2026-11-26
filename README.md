@@ -18,13 +18,33 @@ Each config lives in `config/` and is auto-created with its defaults on first la
 can be on any combination of these lists, independently — being on the star's allowlist
 doesn't put you on the custom-texture one, or vice versa.
 
-## Build
+## Install (PC)
+`hatrix-1.0.0.jar` is committed at the repo root (auto-rebuilt on every change to `main`), so
+you don't need to build it yourself.
+
+1. Download `hatrix-1.0.0.jar` from this repo.
+2. Install [Fabric Loader](https://fabricmc.net/use/) 0.20.1+ for Minecraft 26.3 (its official
+   installer sets up a "Fabric Loader" profile in the vanilla launcher — do that first).
+3. Download **Fabric API** 0.167.0+26.3 as its own jar (from [Modrinth](https://modrinth.com/mod/fabric-api)
+   or [CurseForge](https://www.curseforge.com/minecraft/mc-mods/fabric-api)) — Hatrix needs it
+   too.
+4. Put both jars in your `mods` folder:
+   - Windows: `%APPDATA%\.minecraft\mods`
+   - macOS: `~/Library/Application Support/minecraft/mods`
+   - Linux: `~/.minecraft/mods`
+5. Make sure you have **Java 25**, then launch Minecraft with the "Fabric Loader" profile.
+
+`install-windows.bat` (Windows) and `install.sh` (macOS/Linux) automate step 4 for the Hatrix
+jar itself — download whichever matches your OS alongside `hatrix-1.0.0.jar`, put them in the
+same folder, and run it. They only copy that one file; they don't install Fabric, Fabric API,
+or anything else, and they never download anything from the network.
+
+## Build from source
 Requires Java 25.
 
     JAVA_HOME=/path/to/jdk-25 ./gradlew build
 
-The jar is written to `build/libs/hatrix-1.0.0.jar`. Install it in `mods/` with Fabric Loader
-0.20.1+ and Fabric API 0.167.0+26.3.
+The jar is written to `build/libs/hatrix-1.0.0.jar`.
 
 ## Allowlists
 Every list is checked by the wearer's own account **name or UUID only** — never an access
