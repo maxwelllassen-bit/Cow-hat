@@ -1,6 +1,5 @@
 package com.cowhat.mixin;
 
-import com.cowhat.CowHatClient;
 import com.cowhat.CowHatState;
 import com.cowhat.CowHatTextures;
 import com.cowhat.StarOfDavid;
@@ -20,8 +19,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(CustomHeadLayer.class)
 public abstract class CustomHeadLayerMixin {
     /**
-     * Replace a matching head item with either a configured custom texture or, failing that,
-     * the built-in Star of David, floating above the head. Authorized viewers only.
+     * Replace a matching head item with either a configured custom texture (wearer must be
+     * allowlisted; see {@link com.cowhat.CowHatAuth}) or, failing that, the built-in Star of
+     * David (no allowlist, visible to any viewer running the mod), floating above the head.
      */
     @SuppressWarnings({"rawtypes", "unchecked"})
     @Inject(method = "submit(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;ILnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;FF)V",
@@ -32,7 +32,6 @@ public abstract class CustomHeadLayerMixin {
         boolean isCowHat = cs.cowhat$isCowHat();
         CowHatTextures.Entry custom = cs.cowhat$getCustomTexture();
         if (!isCowHat && custom == null) return;
-        if (!CowHatClient.enabled()) return; // not an authorized local player: leave vanilla rendering alone
         ci.cancel();
 
         EntityModel model = ((RenderLayer) (Object) this).getParentModel();

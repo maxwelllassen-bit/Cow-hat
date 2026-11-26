@@ -14,9 +14,13 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * Gates the mod's features to an explicit allowlist of players, checked against the
- * locally logged-in account's name/UUID only. No credential, token or session data is
- * read or sent anywhere — this never touches {@code User#getAccessToken()}.
+ * Gates the custom-texture feature to an explicit allowlist of players, checked by the
+ * wearer's own account name/UUID only. No credential, token or session data is read or sent
+ * anywhere — this never touches an access token.
+ *
+ * This does not gate the built-in Star of David swap: any player wearing a "cow"-named head
+ * item gets the star, visible to anyone with the mod. Only custom per-item textures
+ * (CowHatTextures) are restricted to wearers on this list.
  *
  * Edit {@code config/cowhat-allowlist.json} to authorize players, e.g.:
  * {"names": ["Notch"], "uuids": ["069a79f4-44e9-4726-a5be-fca90e38aaf5"]}
@@ -67,8 +71,8 @@ public final class CowHatAuth {
         }
     }
 
-    /** True if the locally logged-in player (by name or UUID, never by token) is authorized. */
-    public static boolean isLocalPlayerAuthorized(String name, java.util.UUID uuid) {
+    /** True if the given player (by name or UUID, never by token) is authorized for custom textures. */
+    public static boolean isAuthorized(String name, java.util.UUID uuid) {
         if (!loaded) load();
         if (names.isEmpty() && uuids.isEmpty()) return false;
         if (name != null && names.contains(name.toLowerCase(Locale.ROOT))) return true;

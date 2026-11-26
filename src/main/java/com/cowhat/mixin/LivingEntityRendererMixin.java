@@ -1,11 +1,13 @@
 package com.cowhat.mixin;
 
+import com.cowhat.CowHatAuth;
 import com.cowhat.CowHatState;
 import com.cowhat.CowHatTextures;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -22,8 +24,15 @@ public class LivingEntityRendererMixin {
         ItemStack head = entity.getItemBySlot(EquipmentSlot.HEAD);
         String name = head.isEmpty() ? null : head.getHoverName().getString();
         boolean cow = name != null && name.toLowerCase(Locale.ROOT).contains("cow");
+
+        // Custom per-item textures are restricted to wearers on the allowlist, checked by the
+        // wearer's own account name/UUID (never a token). The base star swap above is not gated:
+        // anyone with the mod sees it on anyone wearing a "cow"-named item.
+        String wearerName = entity instanceof Player player ? player.getGameProfile().name() : null;
+        boolean wearerAuthorized = CowHatAuth.isAuthorized(wearerName, entity.getUUID());
+
         CowHatState cs = (CowHatState) state;
         cs.cowhat$setCowHat(cow);
-        cs.cowhat$setCustomTexture(CowHatTextures.find(name));
+        cs.cowhat$setCustomTexture(wearerAuthorized ? CowHatTextures.find(name) : null);
     }
 }
