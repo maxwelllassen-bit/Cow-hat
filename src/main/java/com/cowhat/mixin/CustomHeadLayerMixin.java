@@ -1,7 +1,8 @@
 package com.cowhat.mixin;
 
-import com.cowhat.CowHatClient;
+import com.cowhat.CatEars;
 import com.cowhat.CowHatState;
+import com.cowhat.CowHatTextures;
 import com.cowhat.StarOfDavid;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.model.EntityModel;
@@ -18,22 +19,44 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(CustomHeadLayer.class)
 public abstract class CustomHeadLayerMixin {
-    /** Replace the cow hat with a Star of David floating above the head, for authorized viewers only. */
+    /**
+     * Two independent cosmetics, both restricted to allowlisted wearers (see
+     * {@link com.cowhat.CowHatAuth}, {@link CatEars}), visible to any viewer running the mod:
+     * - the head-item swap (custom texture, or failing that, the Star of David) replaces a
+     *   matching item entirely, cancelling vanilla rendering for it;
+     * - cat ears are drawn additively on top of whatever's actually worn, so vanilla
+     *   rendering of a real head item is left alone when only ears apply.
+     */
     @SuppressWarnings({"rawtypes", "unchecked"})
     @Inject(method = "submit(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;ILnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;FF)V",
             at = @At("HEAD"), cancellable = true)
     private void cowhat$submit(PoseStack pose, SubmitNodeCollector collector, int light, LivingEntityRenderState state,
                                float yRot, float xRot, CallbackInfo ci) {
-        if (!((CowHatState) state).cowhat$isCowHat()) return;
-        if (!CowHatClient.enabled()) return; // not an authorized local player: leave vanilla rendering alone
-        ci.cancel();
+        CowHatState cs = (CowHatState) state;
+        CowHatTextures.Entry custom = cs.cowhat$getCustomTexture();
+        boolean swap = cs.cowhat$isCowHat() || custom != null;
+        boolean ears = cs.cowhat$hasCatEars();
+        if (!swap && !ears) return;
 
         EntityModel model = ((RenderLayer) (Object) this).getParentModel();
         pose.pushPose();
         model.root().translateAndRotate(pose);
         ((HeadedModel) model).translateToHead(pose);
-        pose.translate(0.0F, -0.95F, 0.0F); // model space: -y is up; head top is at -0.5
-        collector.submitCustomGeometry(pose, RenderTypes.lines(), StarOfDavid::render);
+
+        if (swap) {
+            ci.cancel(); // replacing the head item entirely: skip vanilla rendering of it
+            pose.pushPose();
+            pose.translate(0.0F, -0.95F, 0.0F); // model space: -y is up; head top is at -0.5
+            if (custom != null) {
+                collector.submitCustomGeometry(pose, custom.renderType(), (p, vc) -> CowHatTextures.renderQuad(p, vc, custom, light));
+            } else {
+                collector.submitCustomGeometry(pose, RenderTypes.lines(), StarOfDavid::render);
+            }
+            pose.popPose();
+        }
+        if (ears) {
+            collector.submitCustomGeometry(pose, RenderTypes.lines(), CatEars::render);
+        }
         pose.popPose();
     }
 }
