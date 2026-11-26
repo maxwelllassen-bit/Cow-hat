@@ -10,9 +10,10 @@ import net.minecraft.network.chat.Component;
 /**
  * Client-side only — never sent to the server, same as any other client command. Registers
  * {@code /hatrix}:
- * - {@code /hatrix toggle}: flips whether a matched custom texture replaces the head item
- *   (default) or sits above it additively, like cat ears.
- * - {@code /hatrix addtexture <match> <file>}: adds a rule to cowhat-textures.json. The PNG
+ * - {@code /hatrix} alone opens the {@link HatrixScreen} menu — toggle the replace/overlay
+ *   setting and add a texture rule by picking a PNG with the OS file picker, no typing needed.
+ * - {@code /hatrix toggle}: the same toggle, from chat, for scripting/convenience.
+ * - {@code /hatrix addtexture <match> <file>}: the same add-a-rule action, from chat. The PNG
  *   must already be in config/cowhat/textures/; this never downloads anything.
  */
 public final class HatrixCommand {
@@ -21,7 +22,7 @@ public final class HatrixCommand {
     public static void register() {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> dispatcher.register(
                 ClientCommands.literal("hatrix")
-                        .executes(HatrixCommand::help)
+                        .executes(HatrixCommand::openMenu)
                         .then(ClientCommands.literal("toggle").executes(HatrixCommand::toggle))
                         .then(ClientCommands.literal("addtexture")
                                 .then(ClientCommands.argument("match", StringArgumentType.string())
@@ -30,10 +31,8 @@ public final class HatrixCommand {
         ));
     }
 
-    private static int help(CommandContext<FabricClientCommandSource> ctx) {
-        ctx.getSource().sendFeedback(Component.literal(
-                "Hatrix: /hatrix toggle (replace vs. overlay for custom textures), "
-                + "/hatrix addtexture <match> <file> (add a texture rule; PNG must already be in config/cowhat/textures/)."));
+    private static int openMenu(CommandContext<FabricClientCommandSource> ctx) {
+        ctx.getSource().getClient().setScreenAndShow(new HatrixScreen());
         return 1;
     }
 

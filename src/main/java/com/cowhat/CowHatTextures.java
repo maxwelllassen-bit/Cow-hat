@@ -180,6 +180,34 @@ public final class CowHatTextures {
         return true;
     }
 
+    /**
+     * Copies a PNG the player picked (from anywhere on their own disk — this never touches
+     * the network) into {@code config/cowhat/textures/}, under a name that won't clobber an
+     * existing file, then calls {@link #addRule}. Returns the saved file's name on success, or
+     * null if the copy or the rule failed.
+     */
+    public static synchronized String importImage(Path source, String match) {
+        if (source == null || match == null || match.isBlank()) return null;
+        try {
+            Files.createDirectories(TEXTURE_DIR);
+            String name = source.getFileName().toString();
+            if (!name.toLowerCase(Locale.ROOT).endsWith(".png")) name = name + ".png";
+            String stem = name.substring(0, name.length() - 4);
+            Path dest = TEXTURE_DIR.resolve(name);
+            int i = 1;
+            while (Files.exists(dest)) {
+                dest = TEXTURE_DIR.resolve(stem + "_" + i + ".png");
+                i++;
+            }
+            Files.copy(source, dest);
+            String savedName = dest.getFileName().toString();
+            return addRule(match, savedName) ? savedName : null;
+        } catch (IOException e) {
+            CowHatClient.LOGGER.warn("Cow Hat: failed to import image {}", source, e);
+            return null;
+        }
+    }
+
     /** First configured entry whose match text is contained in the item's name, or null. */
     public static Entry find(String itemName) {
         if (!loaded) load();

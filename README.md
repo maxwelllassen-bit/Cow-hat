@@ -71,17 +71,24 @@ for the match rules:
 - Textures are loaded and uploaded to the GPU lazily, the first time they're needed, since
   that needs an active render context.
 
-### `/hatrix` command
-A client-side command (never sent to the server, same as any other client-only command):
+### `/hatrix` menu and command
+`/hatrix` alone opens a small in-game menu (`HatrixScreen`): a button to flip the
+replace/overlay setting below, a text field for the match string, and an **"Add Image..."**
+button that opens your OS's native file picker — pick a PNG from anywhere on your computer and
+it's copied into `config/cowhat/textures/` and wired up to the match rule automatically. No
+chat commands or manual file-copying required. This never touches the network; the image never
+leaves your machine.
+
+The same two actions are also available as chat subcommands (client-side only, never sent to
+the server), if you'd rather script them or skip the menu:
 
 - `/hatrix toggle` — flips whether a matched custom texture **replaces** the head item
   (the default) or **sits above it additively**, the same way cat ears do. This is one global
   setting, persisted to `config/hatrix-settings.json`, affecting every wearer's custom
   texture, not per-player.
 - `/hatrix addtexture <match> <file>` — appends `{"match": "<match>", "file": "<file>"}` to
-  `cowhat-textures.json` for you and reloads. `file` must already exist in
-  `config/cowhat/textures/`; this never downloads an image over the network, it only wires up
-  a PNG you've already placed there to a match rule.
+  `cowhat-textures.json` and reloads. `file` must already exist in `config/cowhat/textures/`
+  (the menu's "Add Image..." button does that copy for you).
 - `/hatrix` alone prints a short usage reminder.
 
 ## Cat ears
