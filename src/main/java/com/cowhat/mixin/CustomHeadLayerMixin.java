@@ -1,5 +1,6 @@
 package com.cowhat.mixin;
 
+import com.cowhat.CowHatClient;
 import com.cowhat.CowHatState;
 import com.cowhat.StarOfDavid;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -17,13 +18,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(CustomHeadLayer.class)
 public abstract class CustomHeadLayerMixin {
-    /** Replace the cow hat with a Star of David floating above the head. */
+    /** Replace the cow hat with a Star of David floating above the head, for authorized viewers only. */
     @SuppressWarnings({"rawtypes", "unchecked"})
     @Inject(method = "submit(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;ILnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;FF)V",
             at = @At("HEAD"), cancellable = true)
     private void cowhat$submit(PoseStack pose, SubmitNodeCollector collector, int light, LivingEntityRenderState state,
                                float yRot, float xRot, CallbackInfo ci) {
         if (!((CowHatState) state).cowhat$isCowHat()) return;
+        if (!CowHatClient.enabled()) return; // not an authorized local player: leave vanilla rendering alone
         ci.cancel();
 
         EntityModel model = ((RenderLayer) (Object) this).getParentModel();

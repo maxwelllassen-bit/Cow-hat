@@ -16,3 +16,18 @@ The jar is written to `build/libs/cow-hat-1.0.0.jar`. Install it in `mods/` with
   `CustomHeadLayerMixin` skips the normal head rendering and draws the star (`StarOfDavid`).
 - Detection is by item name. If Hypixel's cow hat is named differently, edit the check in `LivingEntityRendererMixin`.
 - Compiled and mixin targets checked against the 26.3 jar, but not run in-game (no GPU in the build container).
+
+## Authorization
+The star-swap only runs for players on an allowlist, checked against the **locally logged-in
+account's name/UUID** — never an access token or session credential. On first launch the mod
+writes `config/cowhat-allowlist.json`:
+
+```json
+{
+  "names": ["Notch"],
+  "uuids": ["069a79f4-44e9-4726-a5be-fca90e38aaf5"]
+}
+```
+
+Add the usernames or UUIDs you want to authorize. An empty or missing file means nobody is
+authorized (fails closed) — the mod does nothing and vanilla rendering is untouched.
