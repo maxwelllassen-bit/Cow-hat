@@ -32,7 +32,11 @@ public final class HatrixCommand {
     }
 
     private static int openMenu(CommandContext<FabricClientCommandSource> ctx) {
-        ctx.getSource().getClient().setScreenAndShow(new HatrixScreen());
+        // Opening a Screen directly from a command's executor gets wiped out: closing the chat
+        // input after a submitted command clears the screen in the same tick, right after this
+        // runs. Deferring to the next tick lets our screen survive that.
+        net.minecraft.client.Minecraft client = ctx.getSource().getClient();
+        client.execute(() -> client.setScreenAndShow(new HatrixScreen()));
         return 1;
     }
 
