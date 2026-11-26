@@ -71,6 +71,19 @@ for the match rules:
 - Textures are loaded and uploaded to the GPU lazily, the first time they're needed, since
   that needs an active render context.
 
+### `/hatrix` command
+A client-side command (never sent to the server, same as any other client-only command):
+
+- `/hatrix toggle` — flips whether a matched custom texture **replaces** the head item
+  (the default) or **sits above it additively**, the same way cat ears do. This is one global
+  setting, persisted to `config/hatrix-settings.json`, affecting every wearer's custom
+  texture, not per-player.
+- `/hatrix addtexture <match> <file>` — appends `{"match": "<match>", "file": "<file>"}` to
+  `cowhat-textures.json` for you and reloads. `file` must already exist in
+  `config/cowhat/textures/`; this never downloads an image over the network, it only wires up
+  a PNG you've already placed there to a match rule.
+- `/hatrix` alone prints a short usage reminder.
+
 ## Cat ears
 A player on `cowhat-catears.json` gets a pair of black triangle-outline cat ears drawn on top
 of their head, regardless of what head item they're wearing — this doesn't replace anything.
@@ -85,7 +98,10 @@ bear → plain star**.
 - Two mixins: `LivingEntityRendererMixin` resolves each flag during state extraction (cow hat,
   matching custom texture, cat ears, bear — each against its own allowlist); `CustomHeadLayerMixin`
   draws them. The head-item swap (texture, bear, or star) cancels vanilla rendering of that
-  item; cat ears are additive and never cancel anything.
+  item; cat ears are always additive. A custom texture only cancels rendering when
+  `/hatrix toggle` is in its default ("replace") state — in overlay mode it draws additively,
+  same as cat ears, and the actual item (or the bear/star, if either also applies) stays
+  visible underneath.
 - "Cow hat" detection is by item name. If Hypixel's cow hat is named differently, edit the
   check in `LivingEntityRendererMixin`.
 - Compiled and mixin targets checked against the 26.3 jar, but not run in-game — there's no

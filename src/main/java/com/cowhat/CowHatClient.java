@@ -10,5 +10,6 @@ public class CowHatClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         CowHatAuth.load();
+        HatrixCommand.register();
     }
 }

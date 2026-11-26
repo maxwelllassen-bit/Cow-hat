@@ -1,6 +1,7 @@
 package com.cowhat;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -42,6 +43,10 @@ public final class CowHatTextures {
             FabricLoader.getInstance().getConfigDir().resolve("cowhat-textures-allowlist.json"),
             "Add Minecraft usernames and/or UUIDs here to let them use custom textures (see cowhat-textures.json for the rules). Independent of cowhat-allowlist.json.",
             "snowrain", "Becausepainfully", "jagling", "Keekraft");
+    private static final String COMMENT = "Map a case-insensitive substring of an item's display name to a PNG "
+            + "placed in config/cowhat/textures/. A match here is drawn above the head instead of the built-in "
+            + "Star of David. Example: {\"match\": \"birthday\", \"file\": \"party_hat.png\"}. "
+            + "Can also be edited with /hatrix addtexture <match> <file>.";
     private static final List<Entry> ENTRIES = new ArrayList<>();
     private static boolean loaded = false;
 
@@ -125,17 +130,54 @@ public final class CowHatTextures {
     private static void writeTemplate() {
         try {
             Files.createDirectories(TEXTURE_DIR);
-            Files.writeString(CONFIG,
-                    "{\n"
-                    + "  \"_comment\": \"Map a case-insensitive substring of an item's display name to a PNG placed in "
-                    + "config/cowhat/textures/. A match here is drawn above the head instead of the built-in Star of David. "
-                    + "Example: {\\\"match\\\": \\\"birthday\\\", \\\"file\\\": \\\"party_hat.png\\\"}\",\n"
-                    + "  \"rules\": []\n"
-                    + "}\n",
-                    StandardCharsets.UTF_8);
+            Config cfg = new Config();
+            cfg._comment = COMMENT;
+            cfg.rules = new Rule[0];
+            Files.writeString(CONFIG, new GsonBuilder().setPrettyPrinting().create().toJson(cfg), StandardCharsets.UTF_8);
         } catch (IOException e) {
             CowHatClient.LOGGER.warn("Cow Hat: could not write default texture config", e);
         }
+    }
+
+    /**
+     * Appends a new match rule to {@code cowhat-textures.json} and reloads (re-uploading every
+     * texture, since indices may shift). Returns false, without changing anything, if {@code
+     * file} doesn't exist under {@code config/cowhat/textures/} yet — the PNG has to be placed
+     * there first; this never fetches anything over the network.
+     */
+    public static synchronized boolean addRule(String match, String file) {
+        if (match == null || match.isEmpty() || file == null || file.isEmpty()) return false;
+        if (!Files.exists(TEXTURE_DIR.resolve(file))) return false;
+
+        Config cfg = null;
+        if (Files.exists(CONFIG)) {
+            try {
+                cfg = new Gson().fromJson(Files.readString(CONFIG, StandardCharsets.UTF_8), Config.class);
+            } catch (IOException | RuntimeException e) {
+                CowHatClient.LOGGER.warn("Cow Hat: could not read {} before adding a rule, starting fresh", CONFIG, e);
+            }
+        }
+        if (cfg == null) cfg = new Config();
+        Rule[] old = cfg.rules == null ? new Rule[0] : cfg.rules;
+        Rule[] updated = new Rule[old.length + 1];
+        System.arraycopy(old, 0, updated, 0, old.length);
+        Rule rule = new Rule();
+        rule.match = match;
+        rule.file = file;
+        updated[old.length] = rule;
+        cfg.rules = updated;
+        cfg._comment = COMMENT;
+
+        try {
+            Files.createDirectories(CONFIG.getParent());
+            Files.writeString(CONFIG, new GsonBuilder().setPrettyPrinting().create().toJson(cfg), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            CowHatClient.LOGGER.warn("Cow Hat: could not write {}", CONFIG, e);
+            return false;
+        }
+        loaded = false;
+        load(); // re-reads everything, including the new rule, and re-uploads the textures
+        return true;
     }
 
     /** First configured entry whose match text is contained in the item's name, or null. */
