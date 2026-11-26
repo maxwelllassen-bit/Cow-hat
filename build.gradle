@@ -4,7 +4,7 @@ plugins {
 
 version = project.mod_version
 group = "com.cowhat"
-base { archivesName = "cow-hat" }
+base { archivesName = "hatrix" }
 
 repositories {}
 
