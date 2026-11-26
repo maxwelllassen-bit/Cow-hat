@@ -9,7 +9,7 @@ Four independent cosmetics ship by default, each with its own allowlist:
 
 | Cosmetic | Allowlist file | Default wearer(s) | Requires a "cow"-named item? | Replaces or adds? |
 |---|---|---|---|---|
-| Star of David | `cowhat-allowlist.json` | `snowrain` | Yes | Replaces the item |
+| Star of David | `cowhat-allowlist.json` | `snowrain`, `KeeKraft` | Yes | Replaces the item |
 | Custom texture | `cowhat-textures-allowlist.json` | `snowrain`, `Becausepainfully`, `jagling`, `Keekraft` | No (rule matches any item name) | Replaces the item, taking priority over the star |
 | Cat ears | `cowhat-catears.json` | `Becausepainfully` | No | Adds on top |
 | Bear | `cowhat-bear.json` | `jagling` | Yes | Replaces the item |
@@ -54,7 +54,7 @@ until you add names or UUIDs.
 
 ```json
 {
-  "names": ["snowrain"],
+  "names": ["snowrain", "KeeKraft"],
   "uuids": []
 }
 ```
