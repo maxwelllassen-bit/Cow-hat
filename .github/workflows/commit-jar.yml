@@ -1,9 +1,14 @@
 name: Build and commit jar
 
 # Keeps the hatrix-1.0.0.jar committed at the repo root in sync with main. Fires on every
-# push to main, rebuilds, and commits the jar back only if it actually changed. The commit
-# message includes "[skip ci]" and the trigger ignores changes to the jar itself, so this
-# can't retrigger itself in a loop.
+# push to main, rebuilds, and commits the jar back only if it actually changed. The trigger
+# ignores changes to the jar itself, so the auto-commit's own push (which touches only that
+# one file) can't retrigger this workflow in a loop.
+#
+# Deliberately NOT using "[skip ci]" in the auto-commit message: GitHub's skip-ci convention
+# is commit-based, not workflow-based, so it would also silently skip release.yml for anyone
+# who later tags this exact commit (which is likely, since it's the commit with the freshest
+# built jar) -- that's exactly what happened to a real release before this comment was added.
 on:
   push:
     branches: [main]
@@ -16,7 +21,6 @@ permissions:
 jobs:
   build-and-commit:
     runs-on: ubuntu-latest
-    if: "!contains(github.event.head_commit.message, '[skip ci]')"
     steps:
       - uses: actions/checkout@v4
 
@@ -35,5 +39,5 @@ jobs:
       - name: Commit updated jar, if changed
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "Update built jar [skip ci]"
+          commit_message: "Update built jar"
           file_pattern: hatrix-1.0.0.jar

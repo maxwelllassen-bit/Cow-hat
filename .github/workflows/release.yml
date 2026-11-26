@@ -4,6 +4,9 @@ on:
   push:
     tags:
       - "v*.*.*"
+  # Lets this be re-run manually against an existing tag (e.g. one whose run never fired, or
+  # whose run failed), without needing to create a new tag just to retrigger it.
+  workflow_dispatch:
 
 permissions:
   contents: write
