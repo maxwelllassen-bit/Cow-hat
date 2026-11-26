@@ -25,7 +25,7 @@ writes `config/cowhat-allowlist.json`:
 ```json
 {
   "names": ["snowrain"],
-  "uuids": ["e74490ab-3bd0-4e3b-8486-233f1bf18ae5"]
+  "uuids": []
 }
 ```
 
