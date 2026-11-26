@@ -4,7 +4,8 @@ Client-side Fabric mod for **Minecraft 26.3** (works on Hypixel, since it only c
 A cow hat (a head-slot item whose name contains "cow") worn by an **allowlisted player** is replaced
 by a blue Star of David floating above their head — visible to **anyone running the mod**. Nobody
 else's cow hat is touched. Allowlisted wearers can additionally get a custom texture instead of
-the star; see below.
+the star; see below. Separately, an allowlisted player can also have cat ears, drawn on top of
+whatever they're wearing.
 
 ## Build
 Requires Java 25.
@@ -14,10 +15,11 @@ Requires Java 25.
 The jar is written to `build/libs/cow-hat-1.0.0.jar`. Install it in `mods/` with Fabric Loader 0.20.1+ and Fabric API 0.167.0+26.3.
 
 ## Notes
-- Two mixins: `LivingEntityRendererMixin` flags the render state when the head item is a cow hat
-  and resolves a custom texture (if the wearer is allowlisted); `CustomHeadLayerMixin` skips the
-  normal head rendering and draws either the custom texture or the star (`StarOfDavid`).
-- Detection is by item name. If Hypixel's cow hat is named differently, edit the check in `LivingEntityRendererMixin`.
+- Two mixins: `LivingEntityRendererMixin` flags the render state (cow hat, matching custom
+  texture, cat ears — each checked against its own allowlist); `CustomHeadLayerMixin` draws
+  them. The head-item swap (texture or star) cancels vanilla rendering of that item; cat ears
+  are drawn additively and never cancel anything.
+- Detection of the cow hat is by item name. If Hypixel's cow hat is named differently, edit the check in `LivingEntityRendererMixin`.
 - Compiled and mixin targets checked against the 26.3 jar, but not run in-game (no GPU in the build container).
 
 ## Who sees what
@@ -65,3 +67,19 @@ star. Edit `config/cowhat-textures.json`:
   Non-allowlisted players are untouched regardless of item name.
 - Textures are loaded and uploaded to the GPU lazily, the first time they're needed, since
   that needs an active render context.
+
+## Cat ears
+A separate cosmetic, independent of the star/texture swap above: an allowlisted player gets a
+pair of black triangle-outline cat ears drawn on top of their head, regardless of what head
+item they're wearing (it doesn't replace anything). Checked the same way, by the wearer's own
+account name/UUID, against `config/cowhat-catears.json`:
+
+```json
+{
+  "names": ["Becausepainfully"],
+  "uuids": []
+}
+```
+
+That's the default the mod ships with. This is a completely separate list from
+`cowhat-allowlist.json` — a player can be on one, both, or neither.
