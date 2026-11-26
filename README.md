@@ -1,9 +1,10 @@
 # Cow-hat
 
 Client-side Fabric mod for **Minecraft 26.3** (works on Hypixel, since it only changes what your own client draws).
-Any entity wearing a cow hat (a head-slot item whose name contains "cow") has it replaced by a blue
-Star of David floating above its head — visible to **anyone running the mod**, for **anyone's**
-cow hat. Allowlisted wearers can additionally get a custom texture instead of the star; see below.
+A cow hat (a head-slot item whose name contains "cow") worn by an **allowlisted player** is replaced
+by a blue Star of David floating above their head — visible to **anyone running the mod**. Nobody
+else's cow hat is touched. Allowlisted wearers can additionally get a custom texture instead of
+the star; see below.
 
 ## Build
 Requires Java 25.
@@ -20,13 +21,14 @@ The jar is written to `build/libs/cow-hat-1.0.0.jar`. Install it in `mods/` with
 - Compiled and mixin targets checked against the 26.3 jar, but not run in-game (no GPU in the build container).
 
 ## Who sees what
-- **The Star of David swap is unrestricted.** Anyone running the mod sees it, on anyone's cow
-  hat, for any "cow"-named head item. There's no allowlist on this part.
-- **Custom per-item textures (below) are restricted by wearer.** Only a player on the
-  allowlist can have their head item replaced by a custom texture; everyone else wearing a
-  matching item still just gets the plain star.
+- **Both the star swap and custom textures are locked to wearers on the allowlist.** If a
+  non-allowlisted player wears a "cow"-named item, nothing happens — vanilla rendering,
+  untouched. There is no viewer-side restriction: anyone running the mod sees the effect, but
+  only on an allowlisted wearer.
+- The mod ships defaulting the allowlist to `snowrain`, so the star is effectively locked to
+  that one player until you edit the config.
 
-## Allowlist (who can have custom textures)
+## Allowlist (who the mod applies to)
 Checked against the **wearer's own account name/UUID** — never an access token or session
 credential. On first launch the mod writes `config/cowhat-allowlist.json`:
 
@@ -38,8 +40,8 @@ credential. On first launch the mod writes `config/cowhat-allowlist.json`:
 ```
 
 That's the default the mod ships with (authorizing `snowrain`). Add more usernames or UUIDs
-as needed. An empty or missing file means nobody is authorized (fails closed) — nobody gets
-custom textures, though the plain star still works for everyone.
+as needed. An empty or missing file means nobody is authorized (fails closed) — the mod does
+nothing for anyone, star included.
 
 ## Custom textures
 A player on the allowlist can have their head item mapped to their own PNG instead of the
@@ -58,8 +60,8 @@ star. Edit `config/cowhat-textures.json`:
   matching rule wins.
 - `file` is a PNG placed in `config/cowhat/textures/`. It's drawn as a flat quad above the
   head, sized to the image's aspect ratio.
-- This only applies to a head item worn by an allowlisted player. For anyone else, a matching
-  "cow" item still falls back to the built-in star; a non-"cow" item with no rule match is
-  untouched either way.
+- This only applies to a head item worn by an allowlisted player. If that player's item
+  doesn't match any rule but still contains "cow", it falls back to the built-in star.
+  Non-allowlisted players are untouched regardless of item name.
 - Textures are loaded and uploaded to the GPU lazily, the first time they're needed, since
   that needs an active render context.

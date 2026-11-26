@@ -25,14 +25,15 @@ public class LivingEntityRendererMixin {
         String name = head.isEmpty() ? null : head.getHoverName().getString();
         boolean cow = name != null && name.toLowerCase(Locale.ROOT).contains("cow");
 
-        // Custom per-item textures are restricted to wearers on the allowlist, checked by the
-        // wearer's own account name/UUID (never a token). The base star swap above is not gated:
-        // anyone with the mod sees it on anyone wearing a "cow"-named item.
+        // Both the star swap and custom textures are restricted to wearers on the allowlist,
+        // checked by the wearer's own account name/UUID (never a token) — i.e. locked to
+        // whoever config/cowhat-allowlist.json names (snowrain by default). Anyone running the
+        // mod can see it, but only on that wearer's cow hat.
         String wearerName = entity instanceof Player player ? player.getGameProfile().name() : null;
         boolean wearerAuthorized = CowHatAuth.isAuthorized(wearerName, entity.getUUID());
 
         CowHatState cs = (CowHatState) state;
-        cs.cowhat$setCowHat(cow);
+        cs.cowhat$setCowHat(cow && wearerAuthorized);
         cs.cowhat$setCustomTexture(wearerAuthorized ? CowHatTextures.find(name) : null);
     }
 }
