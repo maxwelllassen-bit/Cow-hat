@@ -19,12 +19,18 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 
 /**
  * Lets players map a custom texture onto the head overlay, keyed by (a substring of) the
  * worn head item's display name, overriding the built-in Star of David for that item.
  *
- * Config: {@code config/cowhat-textures.json}. PNGs referenced by it live in
+ * This is gated by its own allowlist ({@code cowhat-textures-allowlist.json}), independent of
+ * {@link CowHatAuth} (the star's list) — a wearer doesn't need to be on the star's allowlist
+ * to get a custom texture, and vice versa. It also doesn't require a "cow"-named item; a rule
+ * can match any item name.
+ *
+ * Config: {@code config/cowhat-textures.json} (match rules). PNGs referenced by it live in
  * {@code config/cowhat/textures/}. Loading (including GPU texture upload) happens lazily on
  * the render thread, the first time any entity's head is examined, since it needs an active
  * GL context that does not exist yet during mod init.
@@ -32,10 +38,18 @@ import java.util.Locale;
 public final class CowHatTextures {
     private static final Path CONFIG = FabricLoader.getInstance().getConfigDir().resolve("cowhat-textures.json");
     private static final Path TEXTURE_DIR = FabricLoader.getInstance().getConfigDir().resolve("cowhat/textures");
+    private static final PlayerList AUTH = new PlayerList(
+            FabricLoader.getInstance().getConfigDir().resolve("cowhat-textures-allowlist.json"),
+            "Add Minecraft usernames and/or UUIDs here to let them use custom textures (see cowhat-textures.json for the rules). Independent of cowhat-allowlist.json.",
+            "snowrain", "Becausepainfully", "jagling", "Keekraft");
     private static final List<Entry> ENTRIES = new ArrayList<>();
     private static boolean loaded = false;
 
     private CowHatTextures() {}
+
+    public static boolean isAuthorized(String name, UUID uuid) {
+        return AUTH.contains(name, uuid);
+    }
 
     /** A loaded rule: a lowercase substring to match, the render type for its texture, and the texture's aspect ratio. */
     public static final class Entry {
