@@ -21,8 +21,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(CustomHeadLayer.class)
 public abstract class CustomHeadLayerMixin {
+    /** Model space: -y is up; the head top is at -0.5, so this floats the icon just above it. */
+    private static final float ICON_Y = -0.95F;
+
     /**
-     * Three independent kinds of cosmetic, each restricted to its own allowlisted wearers (see
+     * Independent kinds of cosmetic, each restricted to its own allowlisted wearers (see
      * {@link com.cowhat.CowHatAuth}, {@link CowHatTextures}, {@link CatEars}, {@link Bear}),
      * visible to any viewer running the mod:
      * - the head-item swap (custom texture, else the bear, else the Star of David) replaces a
@@ -39,12 +42,14 @@ public abstract class CustomHeadLayerMixin {
                                float yRot, float xRot, CallbackInfo ci) {
         CowHatState cs = (CowHatState) state;
         CowHatTextures.Entry custom = cs.cowhat$getCustomTexture();
+        boolean bear = cs.cowhat$hasBear();
+        boolean star = cs.cowhat$isCowHat();
+        boolean ears = cs.cowhat$hasCatEars();
+        if (custom == null && !bear && !star && !ears) return; // fast path: nothing of ours on this entity
+
         boolean overlayTexture = custom != null && HatrixSettings.isCustomTextureOverlay();
         boolean replaceTexture = custom != null && !overlayTexture;
-        boolean bear = cs.cowhat$hasBear();
-        boolean swap = cs.cowhat$isCowHat() || replaceTexture || bear;
-        boolean ears = cs.cowhat$hasCatEars();
-        if (!swap && !ears && !overlayTexture) return;
+        boolean swap = replaceTexture || bear || star;
 
         EntityModel model = ((RenderLayer) (Object) this).getParentModel();
         pose.pushPose();
@@ -53,20 +58,16 @@ public abstract class CustomHeadLayerMixin {
 
         if (swap) {
             ci.cancel(); // replacing the head item entirely: skip vanilla rendering of it
-            pose.pushPose();
-            pose.translate(0.0F, -0.95F, 0.0F); // model space: -y is up; head top is at -0.5
-            if (replaceTexture) {
-                collector.submitCustomGeometry(pose, custom.renderType(), (p, vc) -> CowHatTextures.renderQuad(p, vc, custom, light));
-            } else if (bear) {
-                collector.submitCustomGeometry(pose, RenderTypes.lines(), Bear::render);
-            } else {
-                collector.submitCustomGeometry(pose, RenderTypes.lines(), StarOfDavid::render);
+            if (!replaceTexture) {
+                pose.pushPose();
+                pose.translate(0.0F, ICON_Y, 0.0F);
+                collector.submitCustomGeometry(pose, RenderTypes.lines(), bear ? Bear::render : StarOfDavid::render);
+                pose.popPose();
             }
-            pose.popPose();
         }
-        if (overlayTexture) {
+        if (custom != null) { // replace mode drew nothing above, so either mode lands here once
             pose.pushPose();
-            pose.translate(0.0F, -0.95F, 0.0F);
+            pose.translate(0.0F, ICON_Y, 0.0F);
             collector.submitCustomGeometry(pose, custom.renderType(), (p, vc) -> CowHatTextures.renderQuad(p, vc, custom, light));
             pose.popPose();
         }

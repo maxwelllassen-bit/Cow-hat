@@ -17,38 +17,50 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.Locale;
+import java.util.UUID;
 
 @Mixin(LivingEntityRenderer.class)
 public class LivingEntityRendererMixin {
-    /** Flag the render state from the worn head item's name (the state itself has no item name). */
+    /**
+     * Flag the render state from the wearer's allowlists and worn head item's name (the state
+     * itself has no item name). Runs for every living entity every frame, so it bails out for
+     * non-players before any work, and only builds the item's display name when a cosmetic that
+     * depends on it could actually apply.
+     */
     @Inject(method = "extractRenderState(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;F)V", at = @At("TAIL"))
     private void cowhat$flag(LivingEntity entity, LivingEntityRenderState state, float partialTick, CallbackInfo ci) {
-        ItemStack head = entity.getItemBySlot(EquipmentSlot.HEAD);
-        String name = head.isEmpty() ? null : head.getHoverName().getString();
-        boolean cow = name != null && name.toLowerCase(Locale.ROOT).contains("cow");
-
-        // The star swap is restricted to wearers on cowhat-allowlist.json, checked by the
-        // wearer's own account name/UUID (never a token). Anyone running the mod can see it,
-        // but only on that wearer's cow hat.
-        String wearerName = entity instanceof Player player ? player.getGameProfile().name() : null;
-        java.util.UUID wearerUuid = entity.getUUID();
-        boolean wearerAuthorized = CowHatAuth.isAuthorized(wearerName, wearerUuid);
-
         CowHatState cs = (CowHatState) state;
-        cs.cowhat$setCowHat(cow && wearerAuthorized);
+        // Every allowlist is keyed by a player's own account name/UUID (never a token); only
+        // players can be on one. Render states are reused, so always reset.
+        if (!(entity instanceof Player player)) {
+            cs.cowhat$setCowHat(false);
+            cs.cowhat$setCustomTexture(null);
+            cs.cowhat$setCatEars(false);
+            cs.cowhat$setBear(false);
+            return;
+        }
 
-        // Custom textures are gated by their OWN, separate allowlist (cowhat-textures-allowlist.json),
-        // independent of cowhat-allowlist.json above — a wearer doesn't need the star allowlist
-        // to get a custom texture, and a rule can match any item name, not just "cow".
-        cs.cowhat$setCustomTexture(CowHatTextures.isAuthorized(wearerName, wearerUuid) ? CowHatTextures.find(name) : null);
+        String wearer = player.getGameProfile().name().toLowerCase(Locale.ROOT);
+        UUID uuid = entity.getUUID();
 
-        // Cat ears are a separate cosmetic with its own allowlist (cowhat-catears.json);
-        // they don't require any particular head item and don't replace one.
-        cs.cowhat$setCatEars(CatEars.isAuthorized(wearerName, wearerUuid));
+        // Each cosmetic has its own, independent allowlist; being on one says nothing about the others.
+        boolean starAuth = CowHatAuth.isAuthorized(wearer, uuid);
+        boolean textureAuth = CowHatTextures.isAuthorized(wearer, uuid);
+        boolean bearAuth = Bear.isAuthorized(wearer, uuid);
+        // Cat ears need no particular head item and don't replace one.
+        cs.cowhat$setCatEars(CatEars.isAuthorized(wearer, uuid));
 
-        // Bear is also a separate, independently-allowlisted cosmetic (cowhat-bear.json,
-        // jagling by default), but unlike cat ears it only applies while wearing a "cow"-named
-        // item — it's an alternative to the star, not an unconditional addition.
-        cs.cowhat$setBear(cow && Bear.isAuthorized(wearerName, wearerUuid));
+        String item = null;
+        if (starAuth || textureAuth || bearAuth) {
+            ItemStack head = entity.getItemBySlot(EquipmentSlot.HEAD);
+            if (!head.isEmpty()) item = head.getHoverName().getString().toLowerCase(Locale.ROOT);
+        }
+        boolean cow = item != null && item.contains("cow");
+
+        cs.cowhat$setCowHat(cow && starAuth);
+        // Custom texture rules can match any item name, not just "cow".
+        cs.cowhat$setCustomTexture(textureAuth ? CowHatTextures.find(item) : null);
+        // Bear is an alternative to the star, so it also needs a "cow"-named item.
+        cs.cowhat$setBear(cow && bearAuth);
     }
 }

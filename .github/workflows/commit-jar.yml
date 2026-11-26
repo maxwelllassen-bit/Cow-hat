@@ -34,7 +34,7 @@ jobs:
         run: ./gradlew build --no-daemon
 
       - name: Copy jar to repo root
-        run: cp build/libs/*.jar hatrix-1.0.0.jar
+        run: cp build/libs/hatrix-1.0.0.jar hatrix-1.0.0.jar
 
       - name: Commit updated jar, if changed
         uses: stefanzweifel/git-auto-commit-action@v5

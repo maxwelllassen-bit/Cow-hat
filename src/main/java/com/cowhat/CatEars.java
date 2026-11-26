@@ -19,41 +19,32 @@ public final class CatEars {
             "Add Minecraft usernames and/or UUIDs here to give them cat ears.",
             "Becausepainfully");
 
-    private static final float WIDTH = 5.0F;
+    /** Two triangle-outline ears (model space: -y is up, head top is at y = -0.5). */
+    private static final float[] SEGMENTS = Lines.segments(Lines.concat(ear(1F), ear(-1F)));
 
     private CatEars() {}
 
-    public static boolean isAuthorized(String name, UUID uuid) {
-        return LIST.contains(name, uuid);
+    public static void load() {
+        LIST.load();
     }
 
-    /**
-     * Draws two black triangle-outline ears on top of the head. Called with the pose already
-     * translated to the head's pivot (model space: -y is up, head top is at y = -0.5).
-     */
+    /** {@code lowerName} must already be lowercased (see {@link PlayerList#contains}). */
+    public static boolean isAuthorized(String lowerName, UUID uuid) {
+        return LIST.contains(lowerName, uuid);
+    }
+
+    /** Called with the pose already translated to the head's pivot. */
     public static void render(PoseStack.Pose pose, VertexConsumer vc) {
-        ear(pose, vc, 1F);  // right ear
-        ear(pose, vc, -1F); // left ear (mirrored)
+        Lines.draw(pose, vc, SEGMENTS, 0, 0, 0);
     }
 
-    private static void ear(PoseStack.Pose pose, VertexConsumer vc, float side) {
-        float[] baseNear = {side * 0.12F, -0.5F};
-        float[] baseFar = {side * 0.32F, -0.5F};
-        float[] apex = {side * 0.22F, -0.75F};
-        edge(pose, vc, baseNear, baseFar);
-        edge(pose, vc, baseFar, apex);
-        edge(pose, vc, apex, baseNear);
-    }
-
-    private static void edge(PoseStack.Pose pose, VertexConsumer vc, float[] a, float[] b) {
-        float dx = b[0] - a[0], dy = b[1] - a[1];
-        float len = (float) Math.sqrt(dx * dx + dy * dy);
-        float nx = dx / len, ny = dy / len;
-        vertex(pose, vc, a, nx, ny);
-        vertex(pose, vc, b, nx, ny);
-    }
-
-    private static void vertex(PoseStack.Pose pose, VertexConsumer vc, float[] p, float nx, float ny) {
-        vc.addVertex(pose, p[0], p[1], 0F).setColor(0, 0, 0, 255).setNormal(pose, nx, ny, 0F).setLineWidth(WIDTH);
+    private static float[] ear(float side) {
+        float nearX = side * 0.12F, farX = side * 0.32F, apexX = side * 0.22F;
+        float baseY = -0.5F, apexY = -0.75F;
+        return new float[]{
+                nearX, baseY, farX, baseY,
+                farX, baseY, apexX, apexY,
+                apexX, apexY, nearX, baseY,
+        };
     }
 }
