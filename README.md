@@ -16,9 +16,9 @@ The jar is written to `build/libs/cow-hat-1.0.0.jar`. Install it in `mods/` with
 
 ## Notes
 - Two mixins: `LivingEntityRendererMixin` flags the render state (cow hat, matching custom
-  texture, cat ears — each checked against its own allowlist); `CustomHeadLayerMixin` draws
-  them. The head-item swap (texture or star) cancels vanilla rendering of that item; cat ears
-  are drawn additively and never cancel anything.
+  texture, cat ears, bear — each checked against its own allowlist); `CustomHeadLayerMixin`
+  draws them. The head-item swap (texture, bear, or star) cancels vanilla rendering of that
+  item; cat ears are drawn additively and never cancel anything.
 - Detection of the cow hat is by item name. If Hypixel's cow hat is named differently, edit the check in `LivingEntityRendererMixin`.
 - Compiled and mixin targets checked against the 26.3 jar, but not run in-game (no GPU in the build container).
 
@@ -83,3 +83,19 @@ account name/UUID, against `config/cowhat-catears.json`:
 
 That's the default the mod ships with. This is a completely separate list from
 `cowhat-allowlist.json` — a player can be on one, both, or neither.
+
+## Bear
+Another independent cosmetic, but conditional like the star rather than unconditional like
+cat ears: an allowlisted player who's also wearing a "cow"-named item gets a brown bear-face
+outline instead of the star (if they're not also matched by a custom texture rule, which
+takes priority). Checked by wearer account name/UUID, against `config/cowhat-bear.json`:
+
+```json
+{
+  "names": ["jagling"],
+  "uuids": []
+}
+```
+
+That's the default the mod ships with. Priority when multiple things could apply to the same
+wearer's cow hat: custom texture, then bear, then the plain star.

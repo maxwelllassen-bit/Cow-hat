@@ -12,4 +12,8 @@ public interface CowHatState {
     /** True if this entity is on the cat-ears allowlist ({@link CatEars}). */
     boolean cowhat$hasCatEars();
     void cowhat$setCatEars(boolean value);
+
+    /** True if this entity is on the bear allowlist ({@link Bear}) AND wearing a "cow"-named item. */
+    boolean cowhat$hasBear();
+    void cowhat$setBear(boolean value);
 }
