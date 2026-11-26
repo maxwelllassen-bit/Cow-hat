@@ -5,7 +5,13 @@ import com.mojang.brigadier.context.CommandContext;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.item.ItemStack;
+
+import java.util.Locale;
+import java.util.UUID;
 
 /**
  * Client-side only — never sent to the server, same as any other client command. Registers
@@ -15,6 +21,9 @@ import net.minecraft.network.chat.Component;
  * - {@code /hatrix toggle}: the same toggle, from chat, for scripting/convenience.
  * - {@code /hatrix addtexture <match> <file>}: the same add-a-rule action, from chat. The PNG
  *   must already be in config/cowhat/textures/; this never downloads anything.
+ * - {@code /hatrix debug}: prints, to your own chat, exactly what the mod sees about your
+ *   currently-worn head item and your own account — for diagnosing why a cosmetic isn't
+ *   showing up, without needing to dig through the game log.
  */
 public final class HatrixCommand {
     private HatrixCommand() {}
@@ -28,6 +37,7 @@ public final class HatrixCommand {
                                 .then(ClientCommands.argument("match", StringArgumentType.string())
                                         .then(ClientCommands.argument("file", StringArgumentType.string())
                                                 .executes(HatrixCommand::addTexture))))
+                        .then(ClientCommands.literal("debug").executes(HatrixCommand::debug))
         ));
     }
 
@@ -59,5 +69,30 @@ public final class HatrixCommand {
         ctx.getSource().sendError(Component.literal(
                 "Hatrix: couldn't find config/cowhat/textures/" + file + " — place the PNG there first."));
         return 0;
+    }
+
+    private static int debug(CommandContext<FabricClientCommandSource> ctx) {
+        LocalPlayer player = ctx.getSource().getPlayer();
+        ItemStack head = player.getItemBySlot(EquipmentSlot.HEAD);
+        String name = head.isEmpty() ? null : head.getHoverName().getString();
+        boolean cow = name != null && name.toLowerCase(Locale.ROOT).contains("cow");
+        String wearerName = player.getGameProfile().name();
+        UUID wearerUuid = player.getUUID();
+        boolean starAuth = CowHatAuth.isAuthorized(wearerName, wearerUuid);
+        boolean texAuth = CowHatTextures.isAuthorized(wearerName, wearerUuid);
+        boolean earsAuth = CatEars.isAuthorized(wearerName, wearerUuid);
+        boolean bearAuth = Bear.isAuthorized(wearerName, wearerUuid);
+
+        ctx.getSource().sendFeedback(Component.literal(
+                "Hatrix debug:\n"
+                + "  head item: " + (head.isEmpty() ? "(none)" : "\"" + name + "\"") + "\n"
+                + "  name contains \"cow\": " + cow + "\n"
+                + "  your account: name=\"" + wearerName + "\" uuid=" + wearerUuid + "\n"
+                + "  on cowhat-allowlist.json (star): " + starAuth + "\n"
+                + "  on cowhat-textures-allowlist.json: " + texAuth + "\n"
+                + "  on cowhat-catears.json: " + earsAuth + "\n"
+                + "  on cowhat-bear.json: " + bearAuth + "\n"
+                + "  => star should show right now: " + (cow && starAuth)));
+        return 1;
     }
 }
