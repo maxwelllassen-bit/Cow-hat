@@ -24,7 +24,8 @@ public final class CowHatAuth {
         LIST.load();
     }
 
-    public static boolean isAuthorized(String name, UUID uuid) {
-        return LIST.contains(name, uuid);
+    /** {@code lowerName} must already be lowercased (see {@link PlayerList#contains}). */
+    public static boolean isAuthorized(String lowerName, UUID uuid) {
+        return LIST.contains(lowerName, uuid);
     }
 }

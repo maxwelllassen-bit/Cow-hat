@@ -11,6 +11,7 @@ import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.resources.Identifier;
 
 import java.io.IOException;
@@ -34,11 +35,11 @@ import java.util.UUID;
  * Config: {@code config/cowhat-textures.json} (match rules). PNGs referenced by it live in
  * {@code config/cowhat/textures/}. Loading (including GPU texture upload) happens lazily on
  * the render thread, the first time any entity's head is examined, since it needs an active
- * GL context that does not exist yet during mod init.
+ * GPU context that does not exist yet during mod init.
  */
 public final class CowHatTextures {
     private static final Path CONFIG = FabricLoader.getInstance().getConfigDir().resolve("cowhat-textures.json");
-    private static final Path TEXTURE_DIR = FabricLoader.getInstance().getConfigDir().resolve("cowhat/textures");
+    private static final Path TEXTURE_DIR = FabricLoader.getInstance().getConfigDir().resolve("cowhat/textures").toAbsolutePath().normalize();
     private static final PlayerList AUTH = new PlayerList(
             FabricLoader.getInstance().getConfigDir().resolve("cowhat-textures-allowlist.json"),
             "Add Minecraft usernames and/or UUIDs here to let them use custom textures (see cowhat-textures.json for the rules). Independent of cowhat-allowlist.json.",
@@ -47,30 +48,26 @@ public final class CowHatTextures {
             + "placed in config/cowhat/textures/. A match here is drawn above the head instead of the built-in "
             + "Star of David. Example: {\"match\": \"birthday\", \"file\": \"party_hat.png\"}. "
             + "Can also be edited with /hatrix addtexture <match> <file>.";
-    private static final List<Entry> ENTRIES = new ArrayList<>();
-    private static boolean loaded = false;
+    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+
+    /** Immutable snapshot, swapped whole on reload; null until first loaded. */
+    private static volatile List<Entry> entries;
+    /** Texture ids registered by the last load, released on the next one so reloads don't leak GPU memory. */
+    private static final List<Identifier> registered = new ArrayList<>();
 
     private CowHatTextures() {}
 
-    public static boolean isAuthorized(String name, UUID uuid) {
-        return AUTH.contains(name, uuid);
+    public static void loadAllowlist() {
+        AUTH.load();
+    }
+
+    /** {@code lowerName} must already be lowercased (see {@link PlayerList#contains}). */
+    public static boolean isAuthorized(String lowerName, UUID uuid) {
+        return AUTH.contains(lowerName, uuid);
     }
 
     /** A loaded rule: a lowercase substring to match, the render type for its texture, and the texture's aspect ratio. */
-    public static final class Entry {
-        private final String match;
-        private final RenderType renderType;
-        private final float aspect; // width / height
-
-        Entry(String match, RenderType renderType, float aspect) {
-            this.match = match;
-            this.renderType = renderType;
-            this.aspect = aspect;
-        }
-
-        public RenderType renderType() { return renderType; }
-        public float aspect() { return aspect; }
-    }
+    public record Entry(String match, RenderType renderType, float aspect) {}
 
     private static final class Rule {
         String match;
@@ -83,147 +80,163 @@ public final class CowHatTextures {
     }
 
     public static synchronized void load() {
-        ENTRIES.clear();
+        TextureManager textures = Minecraft.getInstance().getTextureManager();
+        for (Identifier id : registered) textures.release(id);
+        registered.clear();
+
+        List<Entry> loaded = new ArrayList<>();
         if (!Files.exists(CONFIG)) {
-            writeTemplate();
-            loaded = true;
-            return;
-        }
-        try {
-            String json = Files.readString(CONFIG, StandardCharsets.UTF_8);
-            Config cfg = new Gson().fromJson(json, Config.class);
+            writeConfig(new Rule[0]);
+        } else {
+            Config cfg = readConfig();
             if (cfg != null && cfg.rules != null) {
-                int index = 0;
                 for (Rule rule : cfg.rules) {
-                    Entry entry = loadEntry(rule, index++);
-                    if (entry != null) ENTRIES.add(entry);
+                    Entry entry = loadEntry(textures, rule, registered.size());
+                    if (entry != null) loaded.add(entry);
                 }
             }
-        } catch (IOException | RuntimeException e) {
-            CowHatClient.LOGGER.warn("Cow Hat: could not read {}, no custom textures loaded", CONFIG, e);
         }
-        loaded = true;
+        entries = List.copyOf(loaded);
     }
 
-    private static Entry loadEntry(Rule rule, int index) {
-        if (rule == null || rule.match == null || rule.match.isEmpty() || rule.file == null) return null;
-        Path file = TEXTURE_DIR.resolve(rule.file);
-        if (!Files.exists(file)) {
-            CowHatClient.LOGGER.warn("Cow Hat: texture {} (for match \"{}\") does not exist", file, rule.match);
+    private static Config readConfig() {
+        try {
+            return GSON.fromJson(Files.readString(CONFIG, StandardCharsets.UTF_8), Config.class);
+        } catch (IOException | RuntimeException e) {
+            CowHatClient.LOGGER.warn("Hatrix: could not read {}", CONFIG, e);
             return null;
         }
+    }
+
+    /** Resolves a rule's file name inside the texture folder, or null if it would escape it. */
+    private static Path resolveTexture(String file) {
+        if (file == null || file.isBlank()) return null;
+        Path p = TEXTURE_DIR.resolve(file).normalize();
+        return p.startsWith(TEXTURE_DIR) ? p : null;
+    }
+
+    private static Entry loadEntry(TextureManager textures, Rule rule, int index) {
+        if (rule == null || rule.match == null || rule.match.isEmpty()) return null;
+        Path file = resolveTexture(rule.file);
+        if (file == null || !Files.isRegularFile(file)) {
+            CowHatClient.LOGGER.warn("Hatrix: texture \"{}\" (for match \"{}\") is not a file in {}", rule.file, rule.match, TEXTURE_DIR);
+            return null;
+        }
+        NativeImage image = null;
         try {
-            NativeImage image = NativeImage.read(Files.readAllBytes(file));
+            image = NativeImage.read(Files.readAllBytes(file));
             float aspect = (float) image.getWidth() / image.getHeight();
             Identifier id = Identifier.fromNamespaceAndPath("cowhat", "custom/texture_" + index);
-            // Constructor uploads the image to the GPU itself.
-            DynamicTexture texture = new DynamicTexture(() -> "Cow Hat custom texture " + index, image);
-            Minecraft.getInstance().getTextureManager().register(id, texture);
-            RenderType renderType = RenderTypes.entityCutoutCull(id);
-            return new Entry(rule.match.toLowerCase(Locale.ROOT), renderType, aspect);
-        } catch (IOException e) {
-            CowHatClient.LOGGER.warn("Cow Hat: failed to load texture {}", file, e);
+            // The DynamicTexture takes ownership of the image and uploads it itself.
+            DynamicTexture texture = new DynamicTexture(() -> "Hatrix custom texture " + index, image);
+            image = null;
+            textures.register(id, texture);
+            registered.add(id);
+            // Not back-face culled: the quad is flat, so it must stay visible from behind the wearer.
+            return new Entry(rule.match.toLowerCase(Locale.ROOT), RenderTypes.entityCutout(id), aspect);
+        } catch (IOException | RuntimeException e) {
+            CowHatClient.LOGGER.warn("Hatrix: failed to load texture {}", file, e);
+            if (image != null) image.close();
             return null;
         }
     }
 
-    private static void writeTemplate() {
+    private static boolean writeConfig(Rule[] rules) {
+        Config cfg = new Config();
+        cfg._comment = COMMENT;
+        cfg.rules = rules;
         try {
             Files.createDirectories(TEXTURE_DIR);
-            Config cfg = new Config();
-            cfg._comment = COMMENT;
-            cfg.rules = new Rule[0];
-            Files.writeString(CONFIG, new GsonBuilder().setPrettyPrinting().create().toJson(cfg), StandardCharsets.UTF_8);
+            Files.writeString(CONFIG, GSON.toJson(cfg), StandardCharsets.UTF_8);
+            return true;
         } catch (IOException e) {
-            CowHatClient.LOGGER.warn("Cow Hat: could not write default texture config", e);
+            CowHatClient.LOGGER.warn("Hatrix: could not write {}", CONFIG, e);
+            return false;
         }
     }
 
     /**
      * Appends a new match rule to {@code cowhat-textures.json} and reloads (re-uploading every
-     * texture, since indices may shift). Returns false, without changing anything, if {@code
-     * file} doesn't exist under {@code config/cowhat/textures/} yet — the PNG has to be placed
-     * there first; this never fetches anything over the network.
+     * texture, since indices may shift). The PNG must already be in {@code config/cowhat/textures/};
+     * this never fetches anything over the network. Returns null on success, or a short reason
+     * for the failure, without changing anything.
      */
-    public static synchronized boolean addRule(String match, String file) {
-        if (match == null || match.isEmpty() || file == null || file.isEmpty()) return false;
-        if (!Files.exists(TEXTURE_DIR.resolve(file))) return false;
-
-        Config cfg = null;
-        if (Files.exists(CONFIG)) {
-            try {
-                cfg = new Gson().fromJson(Files.readString(CONFIG, StandardCharsets.UTF_8), Config.class);
-            } catch (IOException | RuntimeException e) {
-                CowHatClient.LOGGER.warn("Cow Hat: could not read {} before adding a rule, starting fresh", CONFIG, e);
-            }
+    public static synchronized String addRule(String match, String file) {
+        if (match == null || match.isBlank()) return "the match text is empty";
+        Path path = resolveTexture(file);
+        if (path == null) return "\"" + file + "\" is not a file name inside config/cowhat/textures/";
+        if (!Files.isRegularFile(path)) return "config/cowhat/textures/" + file + " doesn't exist — place the PNG there first";
+        try (NativeImage ignored = NativeImage.read(Files.readAllBytes(path))) {
+            // Validated only; the real upload happens in load().
+        } catch (IOException | RuntimeException e) {
+            return file + " isn't a readable PNG";
         }
-        if (cfg == null) cfg = new Config();
-        Rule[] old = cfg.rules == null ? new Rule[0] : cfg.rules;
-        Rule[] updated = new Rule[old.length + 1];
-        System.arraycopy(old, 0, updated, 0, old.length);
+
+        Rule[] old = new Rule[0];
+        if (Files.exists(CONFIG)) {
+            Config cfg = readConfig();
+            if (cfg == null) return "cowhat-textures.json couldn't be read — fix or delete it first";
+            if (cfg.rules != null) old = cfg.rules;
+        }
         Rule rule = new Rule();
         rule.match = match;
         rule.file = file;
+        Rule[] updated = java.util.Arrays.copyOf(old, old.length + 1);
         updated[old.length] = rule;
-        cfg.rules = updated;
-        cfg._comment = COMMENT;
-
-        try {
-            Files.createDirectories(CONFIG.getParent());
-            Files.writeString(CONFIG, new GsonBuilder().setPrettyPrinting().create().toJson(cfg), StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            CowHatClient.LOGGER.warn("Cow Hat: could not write {}", CONFIG, e);
-            return false;
-        }
-        loaded = false;
-        load(); // re-reads everything, including the new rule, and re-uploads the textures
-        return true;
+        if (!writeConfig(updated)) return "couldn't write cowhat-textures.json (see log)";
+        load();
+        return null;
     }
 
     /**
      * Copies a PNG the player picked (from anywhere on their own disk — this never touches
      * the network) into {@code config/cowhat/textures/}, under a name that won't clobber an
-     * existing file, then calls {@link #addRule}. Returns the saved file's name on success, or
-     * null if the copy or the rule failed.
+     * existing file, then calls {@link #addRule}. Returns null on success, or a short reason.
      */
     public static synchronized String importImage(Path source, String match) {
-        if (source == null || match == null || match.isBlank()) return null;
+        if (source == null || match == null || match.isBlank()) return "nothing to import";
+        Path dest;
         try {
             Files.createDirectories(TEXTURE_DIR);
             String name = source.getFileName().toString();
             if (!name.toLowerCase(Locale.ROOT).endsWith(".png")) name = name + ".png";
             String stem = name.substring(0, name.length() - 4);
-            Path dest = TEXTURE_DIR.resolve(name);
-            int i = 1;
-            while (Files.exists(dest)) {
-                dest = TEXTURE_DIR.resolve(stem + "_" + i + ".png");
-                i++;
-            }
+            dest = TEXTURE_DIR.resolve(name);
+            for (int i = 1; Files.exists(dest); i++) dest = TEXTURE_DIR.resolve(stem + "_" + i + ".png");
             Files.copy(source, dest);
-            String savedName = dest.getFileName().toString();
-            return addRule(match, savedName) ? savedName : null;
         } catch (IOException e) {
-            CowHatClient.LOGGER.warn("Cow Hat: failed to import image {}", source, e);
-            return null;
+            CowHatClient.LOGGER.warn("Hatrix: failed to import image {}", source, e);
+            return "couldn't copy the file (see log)";
         }
+        String error = addRule(match, dest.getFileName().toString());
+        if (error != null) {
+            try {
+                Files.deleteIfExists(dest);
+            } catch (IOException ignored) {
+                // Leaving an unused copy behind is harmless.
+            }
+        }
+        return error;
     }
 
-    /** First configured entry whose match text is contained in the item's name, or null. */
-    public static Entry find(String itemName) {
-        if (!loaded) load();
-        if (itemName == null || ENTRIES.isEmpty()) return null;
-        String lower = itemName.toLowerCase(Locale.ROOT);
-        for (Entry e : ENTRIES) {
-            if (lower.contains(e.match)) return e;
+    /** First configured entry whose match text is contained in the (already lowercased) item name, or null. */
+    public static Entry find(String lowerItemName) {
+        if (lowerItemName == null) return null;
+        List<Entry> list = entries;
+        if (list == null) {
+            load();
+            list = entries;
+        }
+        for (Entry e : list) {
+            if (lowerItemName.contains(e.match())) return e;
         }
         return null;
     }
 
-    /** Draws a flat, camera-forward-facing textured quad the given entry's texture, sized by its aspect ratio. */
+    /** Draws a flat, head-facing textured quad for the given entry, sized by its aspect ratio. */
     public static void renderQuad(PoseStack.Pose pose, VertexConsumer vc, Entry entry, int light) {
-        float h = 0.6F;
-        float w = h * entry.aspect();
-        float halfW = w / 2F, halfH = h / 2F;
+        float halfH = 0.3F;
+        float halfW = halfH * entry.aspect();
         quadVertex(pose, vc, -halfW, -halfH, 0F, 0F, light);
         quadVertex(pose, vc, -halfW, halfH, 0F, 1F, light);
         quadVertex(pose, vc, halfW, halfH, 1F, 1F, light);
