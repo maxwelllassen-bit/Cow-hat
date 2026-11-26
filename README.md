@@ -5,16 +5,18 @@ it works on Hypixel. It gives specific, allowlisted players custom head cosmetic
 **anyone running the mod**, but only on the wearers named in its config files. Nobody else is
 touched.
 
-Three independent cosmetics ship by default:
+Four independent cosmetics ship by default, each with its own allowlist:
 
-| Cosmetic | Config file | Default wearer(s) | Requires a "cow"-named item? | Replaces or adds? |
+| Cosmetic | Allowlist file | Default wearer(s) | Requires a "cow"-named item? | Replaces or adds? |
 |---|---|---|---|---|
-| Star of David / custom texture | `cowhat-allowlist.json` | `snowrain`, `Becausepainfully`, `jagling`, `Keekraft` | Yes | Replaces the item |
+| Star of David | `cowhat-allowlist.json` | `snowrain`, `Becausepainfully`, `jagling`, `Keekraft` | Yes | Replaces the item |
+| Custom texture | `cowhat-textures-allowlist.json` | `snowrain`, `Becausepainfully`, `jagling`, `Keekraft` | No (rule matches any item name) | Replaces the item, taking priority over the star |
 | Cat ears | `cowhat-catears.json` | `Becausepainfully` | No | Adds on top |
 | Bear | `cowhat-bear.json` | `jagling` | Yes | Replaces the item |
 
 Each config lives in `config/` and is auto-created with its defaults on first launch. A player
-can be on any combination of the three lists; they're checked independently.
+can be on any combination of these lists, independently — being on the star's allowlist
+doesn't put you on the custom-texture one, or vice versa.
 
 ## Build
 Requires Java 25.
@@ -37,14 +39,18 @@ until you add names or UUIDs.
 }
 ```
 
-That's `cowhat-allowlist.json`'s shipped default — the other two files follow the same
-`names`/`uuids` shape, just with their own default wearer.
+That's `cowhat-allowlist.json`'s shipped default — the other allowlist files follow the same
+`names`/`uuids` shape, just with their own default wearer(s).
 
-## The Star of David & custom textures
+## The Star of David
 A "cow"-named head item (any item whose display name contains "cow") worn by a player on
-`cowhat-allowlist.json` is replaced by a blue Star of David floating above their head.
+`cowhat-allowlist.json` is replaced by a blue Star of David floating above their head. This is
+the fallback when nothing more specific (custom texture, bear) applies to that wearer.
 
-A player on that same list can instead get their own PNG. Edit `config/cowhat-textures.json`:
+## Custom textures
+A player on `cowhat-textures-allowlist.json` — a separate list from the star's, checked
+independently — can map their own PNG onto any head item. Edit `config/cowhat-textures.json`
+for the match rules:
 
 ```json
 {
@@ -56,11 +62,12 @@ A player on that same list can instead get their own PNG. Edit `config/cowhat-te
 ```
 
 - `match` is a case-insensitive substring checked against the item's display name; the first
-  matching rule wins.
+  matching rule wins. It isn't limited to "cow" — any item name works.
 - `file` is a PNG placed in `config/cowhat/textures/`, drawn as a flat quad sized to the
   image's aspect ratio.
-- If nothing in `rules` matches but the item name still contains "cow", it falls back to the
-  built-in star.
+- A player on this allowlist whose item doesn't match any rule gets no texture from this
+  feature — they might still get the plain star if they're also on `cowhat-allowlist.json`
+  and the item name contains "cow".
 - Textures are loaded and uploaded to the GPU lazily, the first time they're needed, since
   that needs an active render context.
 
@@ -70,14 +77,15 @@ of their head, regardless of what head item they're wearing — this doesn't rep
 
 ## Bear
 A player on `cowhat-bear.json` who's also wearing a "cow"-named item gets a brown bear-face
-outline instead of the star. If a custom texture rule also matches that wearer's item, the
-texture wins; priority is **custom texture → bear → plain star**.
+outline instead of the star. If a custom texture rule also matches that wearer's item (and
+they're on the custom-texture allowlist), the texture wins; priority is **custom texture →
+bear → plain star**.
 
 ## Notes
 - Two mixins: `LivingEntityRendererMixin` resolves each flag during state extraction (cow hat,
-  matching custom texture, cat ears, bear); `CustomHeadLayerMixin` draws them. The head-item
-  swap (texture, bear, or star) cancels vanilla rendering of that item; cat ears are additive
-  and never cancel anything.
+  matching custom texture, cat ears, bear — each against its own allowlist); `CustomHeadLayerMixin`
+  draws them. The head-item swap (texture, bear, or star) cancels vanilla rendering of that
+  item; cat ears are additive and never cancel anything.
 - "Cow hat" detection is by item name. If Hypixel's cow hat is named differently, edit the
   check in `LivingEntityRendererMixin`.
 - Compiled and mixin targets checked against the 26.3 jar, but not run in-game — there's no
