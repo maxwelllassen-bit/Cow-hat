@@ -9,7 +9,7 @@ Four independent cosmetics ship by default, each with its own allowlist:
 
 | Cosmetic | Allowlist file | Default wearer(s) | Requires a "cow"-named item? | Replaces or adds? |
 |---|---|---|---|---|
-| Star of David | `cowhat-allowlist.json` | `snowrain`, `Becausepainfully`, `jagling`, `Keekraft` | Yes | Replaces the item |
+| Star of David | `cowhat-allowlist.json` | `snowrain` | Yes | Replaces the item |
 | Custom texture | `cowhat-textures-allowlist.json` | `snowrain`, `Becausepainfully`, `jagling`, `Keekraft` | No (rule matches any item name) | Replaces the item, taking priority over the star |
 | Cat ears | `cowhat-catears.json` | `Becausepainfully` | No | Adds on top |
 | Bear | `cowhat-bear.json` | `jagling` | Yes | Replaces the item |
@@ -34,7 +34,7 @@ until you add names or UUIDs.
 
 ```json
 {
-  "names": ["snowrain", "Becausepainfully", "jagling", "Keekraft"],
+  "names": ["snowrain"],
   "uuids": []
 }
 ```
@@ -89,7 +89,6 @@ the server), if you'd rather script them or skip the menu:
 - `/hatrix addtexture <match> <file>` — appends `{"match": "<match>", "file": "<file>"}` to
   `cowhat-textures.json` and reloads. `file` must already exist in `config/cowhat/textures/`
   (the menu's "Add Image..." button does that copy for you).
-- `/hatrix` alone prints a short usage reminder.
 
 ## Cat ears
 A player on `cowhat-catears.json` gets a pair of black triangle-outline cat ears drawn on top
