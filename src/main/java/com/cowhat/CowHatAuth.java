@@ -16,7 +16,7 @@ public final class CowHatAuth {
     private static final PlayerList LIST = new PlayerList(
             FabricLoader.getInstance().getConfigDir().resolve("cowhat-allowlist.json"),
             "Add Minecraft usernames and/or UUIDs here to give them the Star of David swap.",
-            "snowrain");
+            "snowrain", "KeeKraft");
 
     private CowHatAuth() {}
 
