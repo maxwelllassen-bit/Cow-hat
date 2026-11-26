@@ -36,14 +36,14 @@ credential. On first launch the mod writes `config/cowhat-allowlist.json`:
 
 ```json
 {
-  "names": ["snowrain"],
+  "names": ["snowrain", "Becausepainfully", "jagling", "Keekraft"],
   "uuids": []
 }
 ```
 
-That's the default the mod ships with (authorizing `snowrain`). Add more usernames or UUIDs
-as needed. An empty or missing file means nobody is authorized (fails closed) — the mod does
-nothing for anyone, star included.
+That's the default the mod ships with. Add more usernames or UUIDs as needed. An empty or
+missing file means nobody is authorized (fails closed) — the mod does nothing for anyone,
+star included.
 
 ## Custom textures
 A player on the allowlist can have their head item mapped to their own PNG instead of the
