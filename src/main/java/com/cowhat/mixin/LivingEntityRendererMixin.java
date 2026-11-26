@@ -1,6 +1,7 @@
 package com.cowhat.mixin;
 
 import com.cowhat.CowHatState;
+import com.cowhat.CowHatTextures;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -15,11 +16,14 @@ import java.util.Locale;
 
 @Mixin(LivingEntityRenderer.class)
 public class LivingEntityRendererMixin {
-    /** Flag the render state when the worn head item is a cow hat (the state itself has no item name). */
+    /** Flag the render state from the worn head item's name (the state itself has no item name). */
     @Inject(method = "extractRenderState(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;F)V", at = @At("TAIL"))
     private void cowhat$flag(LivingEntity entity, LivingEntityRenderState state, float partialTick, CallbackInfo ci) {
         ItemStack head = entity.getItemBySlot(EquipmentSlot.HEAD);
-        boolean cow = !head.isEmpty() && head.getHoverName().getString().toLowerCase(Locale.ROOT).contains("cow");
-        ((CowHatState) state).cowhat$setCowHat(cow);
+        String name = head.isEmpty() ? null : head.getHoverName().getString();
+        boolean cow = name != null && name.toLowerCase(Locale.ROOT).contains("cow");
+        CowHatState cs = (CowHatState) state;
+        cs.cowhat$setCowHat(cow);
+        cs.cowhat$setCustomTexture(CowHatTextures.find(name));
     }
 }

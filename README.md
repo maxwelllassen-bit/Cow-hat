@@ -32,3 +32,25 @@ writes `config/cowhat-allowlist.json`:
 That's the default the mod ships with (authorizing `snowrain`). Add more usernames or UUIDs
 as needed. An empty or missing file means nobody is authorized (fails closed) — the mod does
 nothing and vanilla rendering is untouched.
+
+## Custom textures
+By default, any head item matching "cow" gets the built-in Star of David. You can override
+that per item name with your own PNGs. Edit `config/cowhat-textures.json`:
+
+```json
+{
+  "rules": [
+    {"match": "birthday", "file": "party_hat.png"},
+    {"match": "cow", "file": "my_star.png"}
+  ]
+}
+```
+
+- `match` is a case-insensitive substring checked against the item's display name; the first
+  matching rule wins.
+- `file` is a PNG placed in `config/cowhat/textures/`. It's drawn as a flat quad above the
+  head, sized to the image's aspect ratio.
+- If nothing in `rules` matches but the name still contains "cow", the built-in star is used
+  as a fallback.
+- Textures are loaded and uploaded to the GPU lazily, the first time they're needed, since
+  that needs an active render context.

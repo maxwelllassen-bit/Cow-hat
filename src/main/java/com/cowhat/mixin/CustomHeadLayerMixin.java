@@ -2,6 +2,7 @@ package com.cowhat.mixin;
 
 import com.cowhat.CowHatClient;
 import com.cowhat.CowHatState;
+import com.cowhat.CowHatTextures;
 import com.cowhat.StarOfDavid;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.model.EntityModel;
@@ -18,13 +19,19 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(CustomHeadLayer.class)
 public abstract class CustomHeadLayerMixin {
-    /** Replace the cow hat with a Star of David floating above the head, for authorized viewers only. */
+    /**
+     * Replace a matching head item with either a configured custom texture or, failing that,
+     * the built-in Star of David, floating above the head. Authorized viewers only.
+     */
     @SuppressWarnings({"rawtypes", "unchecked"})
     @Inject(method = "submit(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;ILnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;FF)V",
             at = @At("HEAD"), cancellable = true)
     private void cowhat$submit(PoseStack pose, SubmitNodeCollector collector, int light, LivingEntityRenderState state,
                                float yRot, float xRot, CallbackInfo ci) {
-        if (!((CowHatState) state).cowhat$isCowHat()) return;
+        CowHatState cs = (CowHatState) state;
+        boolean isCowHat = cs.cowhat$isCowHat();
+        CowHatTextures.Entry custom = cs.cowhat$getCustomTexture();
+        if (!isCowHat && custom == null) return;
         if (!CowHatClient.enabled()) return; // not an authorized local player: leave vanilla rendering alone
         ci.cancel();
 
@@ -33,7 +40,12 @@ public abstract class CustomHeadLayerMixin {
         model.root().translateAndRotate(pose);
         ((HeadedModel) model).translateToHead(pose);
         pose.translate(0.0F, -0.95F, 0.0F); // model space: -y is up; head top is at -0.5
-        collector.submitCustomGeometry(pose, RenderTypes.lines(), StarOfDavid::render);
+
+        if (custom != null) {
+            collector.submitCustomGeometry(pose, custom.renderType(), (p, vc) -> CowHatTextures.renderQuad(p, vc, custom, light));
+        } else {
+            collector.submitCustomGeometry(pose, RenderTypes.lines(), StarOfDavid::render);
+        }
         pose.popPose();
     }
 }
