@@ -23,7 +23,7 @@ Requires Java 25.
 
     JAVA_HOME=/path/to/jdk-25 ./gradlew build
 
-The jar is written to `build/libs/cow-hat-1.0.0.jar`. Install it in `mods/` with Fabric Loader
+The jar is written to `build/libs/hatrix-1.0.0.jar`. Install it in `mods/` with Fabric Loader
 0.20.1+ and Fabric API 0.167.0+26.3.
 
 ## Allowlists
