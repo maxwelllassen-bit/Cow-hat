@@ -1,5 +1,6 @@
 package com.cowhat.mixin;
 
+import com.cowhat.Bear;
 import com.cowhat.CatEars;
 import com.cowhat.CowHatAuth;
 import com.cowhat.CowHatState;
@@ -41,5 +42,10 @@ public class LivingEntityRendererMixin {
         // Cat ears are a separate cosmetic with its own allowlist (cowhat-catears.json);
         // they don't require any particular head item and don't replace one.
         cs.cowhat$setCatEars(CatEars.isAuthorized(wearerName, wearerUuid));
+
+        // Bear is also a separate, independently-allowlisted cosmetic (cowhat-bear.json,
+        // jagling by default), but unlike cat ears it only applies while wearing a "cow"-named
+        // item — it's an alternative to the star, not an unconditional addition.
+        cs.cowhat$setBear(cow && Bear.isAuthorized(wearerName, wearerUuid));
     }
 }
